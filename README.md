@@ -2,7 +2,7 @@
 
 **This code is for Sigir 2020 paper Unsupervised Multi-Document Summarizationwith Sentence Graph Compression**
 
-**Python version**: this node requires is in Python3.6
+**Python version**: this code is in Python3.6
 
 ## Dataset
 
