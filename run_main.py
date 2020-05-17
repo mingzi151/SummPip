@@ -12,9 +12,6 @@ import timeit
 from datetime import date
 import argparse
 import math
-import pprint
-import copy
-import math
 
 def read_arguments():
     # read arguments
