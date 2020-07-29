@@ -31,12 +31,18 @@ markers=["for","so","because","since","therefore","consequently","additionally",
 # 39 markers
 
 class SentenceGraph:
-    def __init__(self, sentences_list, w2v, ita=0.9, threshold=0.65):
+    def __init__(self, sentences_list, w2v, use_lm, lm_model, lm_tokenizer, ita=0.9, threshold=0.65):
         self.sentences_list = sentences_list
 
         self.length = len(sentences_list)
 
         self.w2v = w2v
+
+        self.use_lm = use_lm 
+
+        self.lm_model = lm_model
+
+        self.tokenizer = lm_tokenizer
 
         # threshold for step1
         self.threshold = threshold
@@ -148,7 +154,10 @@ class SentenceGraph:
 
     # Step4: calculate sentence embeddings
     def get_sentence_embeddings(self,string):
-        v = self.get_wv_embedding(string)
+        if not self.use_lm:
+            v = self.get_wv_embedding(string)
+        else:
+            v = self.get_lm_embedding(string)
         return v
 
     # get sentence embeddings with w2v
@@ -164,10 +173,24 @@ class SentenceGraph:
         v = v + eps
         return v
 
+    # get language model embedding
+    def get_lm_embedding(self, string):
+        sent = string.lower()
+        eps = 1e-10
+        if len(sent)!= 0:
+            input_ids = torch.tensor([self.tokenizer.encode(sent)])
+            last_hidden_state = self.lm_model(input_ids)[0]
+            hidden_state=last_hidden_state.tolist()
+            v = np.mean(hidden_state,axis=1)
+        else:
+            v = np.zeros((768,))
+        v = v + eps
+        return v
+
     # step 4: compare sentence similarity
     def check_if_similar_sentences(self,sentence_emb1,sentence_emb2):
         flag = False
-        similarity = cos_sim(sentence_emb1,sentence_emb2)
+        similarity = self.cos_sim(sentence_emb1,sentence_emb2)
         if similarity > self.ita:
             flag = True
         return flag
@@ -176,8 +199,18 @@ class SentenceGraph:
     def build_sentence_graph(self,):
         # spectral clustering  
         X = np.zeros([self.length, self.length])
+        
+        # get the vector size
+        self.size = len(self.get_sentence_embeddings(self.sentences_list[0]))
+
+        # get sentence vector holder
+        emb_sentence_vectors = np.zeros([self.length,self.size])
+ 
+        for i in range(self.length):
+             emb_sen = self.get_sentence_embeddings(self.sentences_list[i])
+             emb_sentence_vectors[i,] = emb_sen
+        
         # iterate all sentence nodes to check if they should be connected
-        counter=0
         for i in range(self.length):
             flag = False
             sen_i = self.sentences_list[i]
@@ -200,13 +233,12 @@ class SentenceGraph:
 
                # => step4 check for similar sentences
                 if not flag:
-                    continue
+                    # continue
                     i_sen_emb = emb_sentence_vectors[i,]
                     j_sen_emb = emb_sentence_vectors[j,]
                     flag = self.check_if_similar_sentences(i_sen_emb,j_sen_emb)
 
-                if flag:  
-                    counter += 1                                      
+                if flag:                                      
                     X[i,j] = 1
                     X[j,i] = 1
         return X
