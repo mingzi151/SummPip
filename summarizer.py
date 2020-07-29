@@ -14,6 +14,8 @@ class SummPip():
         ita: float = 0.98,
         seed: int = 88,
         w2v_file: str = "word_vec/multi_news/news_w2v.txt",
+        lm_path: str = "gpt2/mutli_news",
+        use_lm: bool = False
         ):
         """
         This is the SummPip class
@@ -23,18 +25,33 @@ class SummPip():
         :param ita: threshold for determining whether two sentences are similar by vector similarity
         :param seed: the random state to reproduce summarization
         :param w2v_file: file for storing w2v matrix
+        :param lm_path: path for langauge model
+        :param use_lm: use language model or not 
         """
 
         self.nb_clusters = nb_clusters
         self.nb_words = nb_words
         self.ita = ita
         self.seed = seed
-        self.w2v = self._get_w2v_embeddings(w2v_file)
+        self.use_lm = use_lm
+
+        if not self.use_lm:
+            self.w2v = self._get_w2v_embeddings(w2v_file)
+            self.lm_tokenizer = ""
+            self.lm_model = ""
+        else:
+            from transformers import GPT2Tokenizer, GPT2Model
+            self.lm_tokenizer = GPT2Tokenizer.from_pretrained(lm_path)
+            self.lm_model = GPT2Model.from_pretrained(lm_path,
+                                          output_hidden_states=True,
+                                          output_attentions=False)
+            self.w2v = ""
+
         self.sent_detector = nltk.data.load('tokenizers/punkt/english.pickle')
 
         # set seed
-        torch.manual_seed(seed)
-        torch.cuda.manual_seed(seed)
+        torch.manual_seed(self.seed)
+        torch.cuda.manual_seed(self.seed)
 
     def _get_w2v_embeddings(self, w2v_file):
         """
@@ -59,7 +76,7 @@ class SummPip():
 		:return: adjacency matrix 
         """
 
-        graph = SentenceGraph(sentences_list, self.w2v, self.ita)
+        graph = SentenceGraph(sentences_list, self.w2v, self.use_lm, self.lm_model, self.lm_tokenizer, self.ita)
         X = graph.build_sentence_graph()
         return X
 
