@@ -1,6 +1,6 @@
 # SummPip
 
-**This code is for Sigir 2020 paper Unsupervised Multi-Document Summarizationwith Sentence Graph Compression**
+**This code is for Sigir 2020 paper** [SummPip: Unsupervised Multi-Document Summarization with Sentence Graph Compression](https://dl.acm.org/doi/pdf/10.1145/3397271.3401327)
 
 **Python version**: this code is in Python3.6
 
